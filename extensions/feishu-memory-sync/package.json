@@ -1,0 +1,12 @@
+{
+  "name": "openclaw-feishu-memory-sync",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Feishu group/wiki sync tools for company-memory knowledge base.",
+  "main": "./index.js",
+  "openclaw": {
+    "extensions": ["./index.js"]
+  },
+  "dependencies": {}
+}

@@ -1,0 +1,22 @@
+{
+  "id": "feishu-memory-sync",
+  "name": "Feishu Memory Sync",
+  "description": "将飞书群聊消息和 Wiki/文档批量同步到 company-memory 公共知识库，支持增量同步。",
+  "version": "0.1.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": true,
+    "properties": {
+      "feishu": { "type": "object", "additionalProperties": true },
+      "groups": { "type": "object", "additionalProperties": true },
+      "docs": { "type": "object", "additionalProperties": true }
+    }
+  },
+  "activation": { "onStartup": true },
+  "contracts": {
+    "tools": [
+      "feishu_im_bot_sync_group_messages",
+      "feishu_doc_sync_public_memory"
+    ]
+  }
+}

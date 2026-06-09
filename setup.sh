@@ -159,6 +159,48 @@ setup_symlinks() {
   log "软链接建立完成 ✓"
 }
 
+# ── 9. 同步加密密钥（AWS SSM Parameter Store）──────────────
+sync_encryption_key() {
+  log "同步加密密钥..."
+  KEY_PATH="$OC_DIR/credentials/company-memory.key"
+  SSM_PARAM="/openclaw/company-memory-key"
+  REGION="${AWS_DEFAULT_REGION:-us-east-1}"
+
+  if ! command -v aws &>/dev/null; then
+    warn "AWS CLI 未安装，跳过密钥同步"
+    warn "请手动将密钥复制到 $KEY_PATH"
+    return
+  fi
+
+  if [ -f "$KEY_PATH" ]; then
+    # 本机有密钥 → 上传到 SSM（首次或覆盖）
+    aws ssm put-parameter \
+      --name "$SSM_PARAM" \
+      --value "$(cat "$KEY_PATH")" \
+      --type "SecureString" \
+      --overwrite \
+      --region "$REGION" > /dev/null 2>&1 \
+    && log "密钥已同步到 SSM: $SSM_PARAM (region=$REGION)" \
+    || warn "SSM 上传失败（请检查 IAM 权限: ssm:PutParameter）"
+  else
+    # 本机无密钥 → 从 SSM 下载
+    mkdir -p "$(dirname "$KEY_PATH")"
+    if aws ssm get-parameter \
+      --name "$SSM_PARAM" \
+      --with-decryption \
+      --query "Parameter.Value" \
+      --output text \
+      --region "$REGION" > "$KEY_PATH" 2>/dev/null; then
+      chmod 600 "$KEY_PATH"
+      log "密钥已从 SSM 下载到 $KEY_PATH"
+    else
+      warn "SSM 下载失败，请手动创建 $KEY_PATH"
+      warn "可从测试机执行: cat ~/.openclaw/credentials/company-memory.key"
+      warn "然后粘贴到生产机: echo '<内容>' > $KEY_PATH && chmod 600 $KEY_PATH"
+    fi
+  fi
+}
+
 # ── 主流程 ──────────────────────────────────────────────────
 log "OC 配置部署 (mode: $MODE)"
 log "来源: $REPO_DIR"
@@ -184,6 +226,7 @@ case "$MODE" in
     sync_credentials
     apply_config
     install_plugins
+    sync_encryption_key
     register_crons
     ;;
   --default | *)
@@ -194,6 +237,7 @@ case "$MODE" in
     sync_credentials
     apply_config
     install_plugins
+    sync_encryption_key
     ;;
 esac
 

@@ -180,6 +180,30 @@
       },
       "anthropic": {
         "enabled": true
+      },
+      "feishu-memory-sync": {
+        "enabled": true,
+        "config": {
+          "feishu": {
+            "appId": "cli_CHANGE_ME",
+            "appSecret": "CHANGE_ME",
+            "domain": "open.feishu.cn"
+          },
+          "groups": {
+            "enabled": true,
+            "module": "general",
+            "minTextLength": 10,
+            "maxChatsPerRun": 100,
+            "maxMessagesPerChat": 50
+          },
+          "docs": {
+            "enabled": true,
+            "module": "general",
+            "chunkSize": 800,
+            "maxChunksPerDoc": 100,
+            "maxDocsPerRun": 20
+          }
+        }
       }
     },
     "allow": [
@@ -190,7 +214,8 @@
       "codex",
       "tavily",
       "memory-core",
-      "anthropic"
+      "anthropic",
+      "feishu-memory-sync"
     ],
     "bundledDiscovery": "compat"
   },
