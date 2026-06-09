@@ -1,0 +1,35 @@
+# ── workspace 运行时文件 ──────────────────────────────────
+workspace/.backups/
+workspace/.openclaw/
+workspace/.git/
+workspace/state/
+workspace/memory/
+workspace/*.log
+workspace/*_state.json
+workspace/script_output.txt
+workspace/digest_output.log
+
+# ── plugin-skills 运行时文件 ─────────────────────────────
+plugin-skills/*/assets/logs/
+plugin-skills/*/assets/state.json
+plugin-skills/*/assets/*.lock
+plugin-skills/*/assets/new_comments_latest.json
+plugin-skills/*/assets/analyses/
+plugin-skills/*/assets/cron.log
+plugin-skills/*/assets/token_usage.jsonl
+plugin-skills/*/assets/test_run.log
+
+# ── credentials（绝对不进 git）────────────────────────────
+credentials-template/lark.secrets.json
+
+# ── 编译产物 ──────────────────────────────────────────────
+**/__pycache__/
+**/*.pyc
+**/node_modules/
+*.bak
+*.bak-*
+
+# ── 系统文件 ──────────────────────────────────────────────
+.DS_Store
+*.swp
+*.swo

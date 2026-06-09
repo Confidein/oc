@@ -1,0 +1,66 @@
+[
+  {
+    "name": "sync-feishu-group-messages-to-public-memory",
+    "description": "每 30 分钟同步飞书群消息到公共记忆库",
+    "enabled": true,
+    "schedule": { "kind": "every", "everyMs": 1800000 },
+    "sessionTarget": "isolated",
+    "payload": {
+      "kind": "agentTurn",
+      "timeoutSeconds": 600,
+      "model": "anthropic/claude-haiku-4-5",
+      "lightContext": true,
+      "toolsAllow": ["feishu_im_bot_sync_group_messages", "public_memory_store_batch"],
+      "message": "调用 feishu_im_bot_sync_group_messages，参数 use_cursor=true initial_lookback_minutes=0 overlap_minutes=5 max_chats=100 max_messages_per_chat=50 page_size=20 write_items_file=true。若返回 public_memory_store_batch_params，原样传给 public_memory_store_batch。若 item_count=0 不写入。最后输出一行：chat_count=N item_count=N stored=N skipped=N errors=N。不发消息。"
+    },
+    "delivery": { "mode": "none" }
+  },
+  {
+    "name": "sync-feishu-docs-to-public-memory",
+    "description": "每 3 小时同步飞书文档到公共记忆库",
+    "enabled": true,
+    "schedule": { "kind": "every", "everyMs": 10800000 },
+    "sessionTarget": "isolated",
+    "payload": {
+      "kind": "agentTurn",
+      "timeoutSeconds": 1800,
+      "model": "anthropic/claude-haiku-4-5",
+      "lightContext": true,
+      "toolsAllow": ["feishu_doc_sync_public_memory", "public_memory_store_batch"],
+      "message": "同步飞书文档到公共记忆库。循环（最多 60 轮）：\n1. 调 feishu_doc_sync_public_memory action=prepare page_size=10 max_pages=1 max_docs=20 chunk_size=8000 max_chunks_per_doc=100 write_items_file=true。【不要传 folder_tokens / folder_urls / wiki_tokens 等参数】drive_roots 已经在 state 中持久化，prepare 会自动继承。\n2. 若 auth_required 或 errors 表明权限不足，停止。\n3. 若返回 public_memory_store_batch_params，原样传给 public_memory_store_batch。\n4. 写入成功或本轮无 items 时，调 feishu_doc_sync_public_memory action=commit commit=<prepare.commit_params.commit>。\n5. full_scan_complete=true && wiki_scan_complete=true 且 drive_pending_remaining=0 后，再跑一轮 prepare 验证 docs_seen 不再增长就停。\n最后输出一行：spaces_seen=N docs_seen=N docs_synced=N item_count=N stored=N skipped=N errors=N。不发消息。"
+    },
+    "delivery": { "mode": "none" }
+  },
+  {
+    "name": "lark-minutes-ai-digest-all-authorized-users",
+    "description": "每 5 分钟扫描已授权员工新出现的妙记，生成 AI 摘要并发送",
+    "enabled": true,
+    "schedule": { "kind": "every", "everyMs": 300000 },
+    "sessionTarget": "isolated",
+    "payload": {
+      "kind": "agentTurn",
+      "timeoutSeconds": 900,
+      "model": "anthropic/claude-haiku-4-5",
+      "lightContext": true,
+      "toolsAllow": ["exec"],
+      "message": "在 /home/ubuntu/.openclaw/workspace 执行 `node scripts/lark_minutes_digest.mjs --lookback-minutes 60 --today-only`。输出脚本的 JSON 统计。不发消息。"
+    },
+    "delivery": { "mode": "none" }
+  },
+  {
+    "name": "lark-minutes-ai-digest-backfill-authorized-users",
+    "description": "每 6 小时妙记兜底回扫，补发缺失摘要",
+    "enabled": true,
+    "schedule": { "kind": "every", "everyMs": 21600000 },
+    "sessionTarget": "isolated",
+    "payload": {
+      "kind": "agentTurn",
+      "timeoutSeconds": 1200,
+      "model": "anthropic/claude-haiku-4-5",
+      "lightContext": true,
+      "toolsAllow": ["exec"],
+      "message": "在 /home/ubuntu/.openclaw/workspace 执行 `node scripts/lark_minutes_digest.mjs --force-lookback --lookback-minutes 720 --no-advance-checkpoint --today-only`。输出脚本的 JSON 统计。不发消息。"
+    },
+    "delivery": { "mode": "none" }
+  }
+]

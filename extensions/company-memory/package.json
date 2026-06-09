@@ -1,0 +1,16 @@
+{
+  "name": "openclaw-company-memory",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Scoped public/private LanceDB memory tools for OpenClaw.",
+  "main": "./index.js",
+  "openclaw": {
+    "extensions": [
+      "./index.js"
+    ]
+  },
+  "dependencies": {
+    "@lancedb/lancedb": "^0.22.0"
+  }
+}

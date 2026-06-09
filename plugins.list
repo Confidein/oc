@@ -1,0 +1,6 @@
+# 官方插件列表 - 新机器上执行 setup.sh 时自动安装
+# 格式: openclaw plugins install <package>
+
+@openclaw/feishu
+@openclaw/codex
+@larksuite/openclaw-lark

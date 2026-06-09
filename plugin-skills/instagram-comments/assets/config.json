@@ -1,0 +1,20 @@
+{
+  "access_token": "EAAUa0ZAzPWpEBRromAka8b2jmKqq6Y5UQ9MIs4zmYpZC3vs7EBryI3SRTgxcJlri8ZATrYceZB6GZAWAG4scJ848JUCCppXwqqeSxpLZAgFCZBP2f5SBqPLFQFVggWZBQfYlReII3xlJJfubrEGRNsrWIo4nyCu5N7ke97rNw89CvnGStd2P6W2hFy5LdCFQ",
+  "feishu_chat_id": "oc_aab973b8f10b9e85740fdeb40d6c0160",
+  "bitable": {
+    "wiki_token": "SMC1w2k1ciYvagk9iceuwroEtCA",
+    "table_id": "tblQQsesKEACgERy"
+  },
+  "poll_window_hours": 2,
+  "overlap_minutes": 5,
+  "media_page_size": 100,
+  "media_max_pages": 100,
+  "force_full_comment_scan_hours": 168,
+  "always_scan_recent_count": 30,
+  "hot_media_days": 30,
+  "max_hot_media_scan_per_account": 15,
+  "min_comments_periodic_rescan": 5,
+  "max_periodic_rescan_per_account": 40,
+  "api_delay_ms": 200,
+  "sentiment_rules": "assets/sentiment_rules.json"
+}

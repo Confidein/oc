@@ -1,0 +1,410 @@
+{
+  "agents": {
+    "defaults": {
+      "workspace": "/home/ubuntu/.openclaw/workspace",
+      "models": {
+        "openai/gpt-5.5": {
+          "alias": "GPT"
+        },
+        "anthropic/claude-sonnet-4-6": {},
+        "anthropic/claude-opus-4.7": {},
+        "anthropic/claude-haiku-4-5": {}
+      },
+      "model": {
+        "primary": "anthropic/claude-sonnet-4-6"
+      }
+    }
+  },
+  "models": {
+    "providers": {
+      "anthropic": {
+        "models": [
+          {
+            "id": "claude-haiku-4-5",
+            "name": "Claude Haiku 4.5"
+          }
+        ]
+      }
+    }
+  },
+  "gateway": {
+    "mode": "local",
+    "auth": {
+      "mode": "token",
+      "token": "YOUR_TOKEN_HERE"
+    },
+    "port": 18789,
+    "bind": "loopback",
+    "tailscale": {
+      "mode": "off",
+      "resetOnExit": false
+    },
+    "controlUi": {
+      "allowInsecureAuth": true
+    },
+    "nodes": {
+      "denyCommands": [
+        "camera.snap",
+        "camera.clip",
+        "screen.record",
+        "contacts.add",
+        "calendar.add",
+        "reminders.add",
+        "sms.send",
+        "sms.search"
+      ]
+    }
+  },
+  "session": {
+    "dmScope": "per-channel-peer"
+  },
+  "tools": {
+    "profile": "coding",
+    "web": {
+      "search": {
+        "provider": "tavily",
+        "enabled": true
+      }
+    },
+    "alsoAllow": [
+      "feishu_bitable_app",
+      "feishu_bitable_app_table",
+      "feishu_bitable_app_table_field",
+      "feishu_bitable_app_table_record",
+      "feishu_bitable_app_table_view",
+      "feishu_calendar_calendar",
+      "feishu_calendar_event",
+      "feishu_calendar_event_attendee",
+      "feishu_calendar_freebusy",
+      "feishu_chat",
+      "feishu_chat_members",
+      "feishu_create_doc",
+      "feishu_doc_comments",
+      "feishu_doc_media",
+      "feishu_drive_file",
+      "feishu_fetch_doc",
+      "feishu_get_user",
+      "feishu_im_bot_image",
+      "feishu_im_bot_sync_group_messages",
+      "feishu_doc_sync_public_memory",
+      "feishu_im_user_fetch_resource",
+      "feishu_im_user_get_messages",
+      "feishu_im_user_get_thread_messages",
+      "feishu_im_user_message",
+      "feishu_im_user_search_messages",
+      "feishu_oauth",
+      "feishu_oauth_batch_auth",
+      "feishu_minutes_search",
+      "feishu_search_doc_wiki",
+      "feishu_search_user",
+      "feishu_sheet",
+      "feishu_task_comment",
+      "feishu_task_subtask",
+      "feishu_task_task",
+      "feishu_task_agent",
+      "feishu_task_attachment",
+      "feishu_task_tasklist",
+      "feishu_update_doc",
+      "feishu_wiki_space",
+      "feishu_wiki_space_node",
+      "company_context_search",
+      "private_memory_store",
+      "public_memory_store",
+      "public_memory_store_batch"
+    ]
+  },
+  "plugins": {
+    "slots": {
+      "contextEngine": "company-memory"
+    },
+    "entries": {
+      "openai": {
+        "enabled": true
+      },
+      "codex": {
+        "enabled": true,
+        "config": {
+          "appServer": {
+            "mode": "yolo",
+            "approvalPolicy": "never",
+            "sandbox": "danger-full-access",
+            "transport": "stdio",
+            "codeModeOnly": false,
+            "requestTimeoutMs": 60000,
+            "turnCompletionIdleTimeoutMs": 60000
+          },
+          "codexDynamicToolsLoading": "searchable",
+          "codexDynamicToolsExclude": []
+        }
+      },
+      "tavily": {
+        "enabled": true,
+        "config": {
+          "webSearch": {
+            "apiKey": "YOUR_APIKEY_HERE"
+          }
+        }
+      },
+      "feishu": {
+        "enabled": false
+      },
+      "openclaw-lark": {
+        "enabled": true,
+        "config": {}
+      },
+      "company-memory": {
+        "enabled": true,
+        "config": {
+          "dbPath": "~/.openclaw/company-memory/lancedb",
+          "tableName": "memories",
+          "tenantId": "default",
+          "embedding": {
+            "provider": "openai",
+            "model": "text-embedding-3-small",
+            "baseUrl": "https://api.openai.com/v1"
+          },
+          "limits": {
+            "defaultSearchLimit": 8,
+            "maxSearchLimit": 20,
+            "maxStoreChars": 12000
+          },
+          "_note": "迁移到 RDS 后，删除 dbPath，改用 connectionString",
+          "connectionString": "YOUR_RDS_CONNECTION_STRING_HERE"
+        }
+      },
+      "memory-core": {
+        "config": {}
+      },
+      "anthropic": {
+        "enabled": true
+      }
+    },
+    "allow": [
+      "feishu",
+      "openclaw-lark",
+      "company-memory",
+      "openai",
+      "codex",
+      "tavily",
+      "memory-core",
+      "anthropic"
+    ],
+    "bundledDiscovery": "compat"
+  },
+  "auth": {
+    "profiles": {
+      "openai:default": {
+        "provider": "openai",
+        "mode": "api_key"
+      },
+      "anthropic:default": {
+        "provider": "anthropic",
+        "mode": "api_key"
+      }
+    }
+  },
+  "hooks": {
+    "internal": {
+      "enabled": true,
+      "entries": {
+        "boot-md": {
+          "enabled": true
+        },
+        "bootstrap-extra-files": {
+          "enabled": true
+        },
+        "command-logger": {
+          "enabled": true
+        },
+        "compaction-notifier": {
+          "enabled": true
+        },
+        "session-memory": {
+          "enabled": false
+        },
+        "request-ledger": {
+          "enabled": true,
+          "logPath": "~/.openclaw/logs/request-ledger.jsonl"
+        }
+      }
+    }
+  },
+  "channels": {
+    "feishu": {
+      "enabled": true,
+      "appId": "cli_aa84d0afed388060",
+      "appSecret": {
+        "source": "file",
+        "provider": "lark-secrets",
+        "id": "/lark/appSecret"
+      },
+      "domain": "lark",
+      "connectionMode": "websocket",
+      "requireMention": true,
+      "dmPolicy": "open",
+      "allowFrom": [
+        "*"
+      ],
+      "groupAllowFrom": [
+        "*"
+      ],
+      "groupPolicy": "all",
+      "groups": {
+        "*": {
+          "enabled": true
+        }
+      },
+      "streaming": true,
+      "footer": {
+        "elapsed": true,
+        "status": true
+      }
+    }
+  },
+  "secrets": {
+    "providers": {
+      "lark-secrets": {
+        "source": "file",
+        "path": "~/.openclaw/credentials/lark.secrets.json"
+      }
+    }
+  },
+  "skills": {
+    "entries": {
+      "1password": {
+        "enabled": false
+      },
+      "apple-notes": {
+        "enabled": false
+      },
+      "apple-reminders": {
+        "enabled": false
+      },
+      "bear-notes": {
+        "enabled": false
+      },
+      "blogwatcher": {
+        "enabled": false
+      },
+      "blucli": {
+        "enabled": false
+      },
+      "camsnap": {
+        "enabled": false
+      },
+      "clawhub": {
+        "enabled": false
+      },
+      "coding-agent": {
+        "enabled": false
+      },
+      "discord": {
+        "enabled": false
+      },
+      "eightctl": {
+        "enabled": false
+      },
+      "gemini": {
+        "enabled": false
+      },
+      "gh-issues": {
+        "enabled": false
+      },
+      "gifgrep": {
+        "enabled": false
+      },
+      "github": {
+        "enabled": false
+      },
+      "gog": {
+        "enabled": false
+      },
+      "goplaces": {
+        "enabled": false
+      },
+      "himalaya": {
+        "enabled": false
+      },
+      "imsg": {
+        "enabled": false
+      },
+      "mcporter": {
+        "enabled": false
+      },
+      "model-usage": {
+        "enabled": false
+      },
+      "nano-pdf": {
+        "enabled": false
+      },
+      "obsidian": {
+        "enabled": false
+      },
+      "openai-whisper": {
+        "enabled": false
+      },
+      "openai-whisper-api": {
+        "enabled": false
+      },
+      "openhue": {
+        "enabled": false
+      },
+      "oracle": {
+        "enabled": false
+      },
+      "ordercli": {
+        "enabled": false
+      },
+      "peekaboo": {
+        "enabled": false
+      },
+      "sag": {
+        "enabled": false
+      },
+      "session-logs": {
+        "enabled": false
+      },
+      "sherpa-onnx-tts": {
+        "enabled": false
+      },
+      "slack": {
+        "enabled": false
+      },
+      "songsee": {
+        "enabled": false
+      },
+      "sonoscli": {
+        "enabled": false
+      },
+      "spotify-player": {
+        "enabled": false
+      },
+      "summarize": {
+        "enabled": false
+      },
+      "things-mac": {
+        "enabled": false
+      },
+      "trello": {
+        "enabled": false
+      },
+      "video-frames": {
+        "enabled": false
+      },
+      "voice-call": {
+        "enabled": false
+      },
+      "wacli": {
+        "enabled": false
+      },
+      "xurl": {
+        "enabled": false
+      }
+    }
+  },
+  "commands": {
+    "ownerAllowFrom": [
+      "feishu:ou_334a51a4cbf495d4611b8f4cb9a4e7af"
+    ]
+  }
+}

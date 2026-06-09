@@ -1,0 +1,40 @@
+{
+  "id": "company-memory",
+  "name": "Company Memory",
+  "description": "Scoped public/private LanceDB memory tools for company OpenClaw agents.",
+  "version": "0.1.0",
+  "configSchema": {
+    "type": "object",
+    "additionalProperties": true,
+    "properties": {
+      "dbPath": {
+        "type": "string"
+      },
+      "tableName": {
+        "type": "string"
+      },
+      "tenantId": {
+        "type": "string"
+      },
+      "embedding": {
+        "type": "object",
+        "additionalProperties": true
+      },
+      "limits": {
+        "type": "object",
+        "additionalProperties": true
+      }
+    }
+  },
+  "activation": {
+    "onStartup": true
+  },
+  "contracts": {
+    "tools": [
+      "company_context_search",
+      "private_memory_store",
+      "public_memory_store",
+      "public_memory_store_batch"
+    ]
+  }
+}

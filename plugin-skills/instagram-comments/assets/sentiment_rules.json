@@ -1,0 +1,183 @@
+{
+  "version": "2.0",
+  "description": "Instagram comment sentiment rules for Glorify (devotional app) and NFC (Christian smart ring). Edit this file to update classification rules without changing code.",
+
+  "priority": {
+    "order": "negative > positive > neutral",
+    "note": "When a comment contains both positive and negative signals, classify as negative.",
+    "example": "The design is gorgeous but the quality is terrible and it broke in a week. → negative"
+  },
+
+  "positive": {
+    "core": "The reviewer expresses satisfaction or positive emotion toward the product or service.",
+    "match_any": true,
+    "categories": [
+      {
+        "name": "Product",
+        "signals": [
+          "Product quality praise: beautiful, stunning, high quality, solid, well-made, exactly as pictured",
+          "Design/appearance praise: love the design, looks exactly like I hoped",
+          "Wear experience: fits perfectly, comfortable to wear"
+        ]
+      },
+      {
+        "name": "Religious / faith meaning",
+        "signals": [
+          "Ring has faith significance: great reminder of my faith, love the cross/scripture engraving, means a lot to me as a Christian",
+          "Gift accepted in religious context: perfect baptism gift, she loved it for her confirmation"
+        ]
+      },
+      {
+        "name": "Shopping experience",
+        "signals": [
+          "Fast delivery / packaging: arrived quickly, beautifully packaged",
+          "Good customer service: customer service was amazing, they fixed my issue right away"
+        ]
+      },
+      {
+        "name": "Recommendation intent",
+        "signals": [
+          "Clear recommend or repurchase: highly recommend, will buy again, 5 stars"
+        ]
+      }
+    ],
+    "examples": [
+      "Praise God! This ring is beautiful! → positive (faith + product praise)",
+      "I love this app, it helps my daily prayer habit. → positive"
+    ]
+  },
+
+  "negative": {
+    "core": "The reviewer expresses dissatisfaction, disappointment, or a complaint about the product or service.",
+    "match_any": true,
+    "categories": [
+      {
+        "name": "Product quality",
+        "signals": [
+          "Damaged or poor workmanship: broke after a week, tarnished quickly, cheap looking, scratched",
+          "Not as described: not as pictured, much smaller than expected, color is completely different"
+        ]
+      },
+      {
+        "name": "Order / logistics",
+        "signals": [
+          "Wrong item: wrong size/style sent",
+          "Shipping problems: never arrived, took forever, damaged in shipping"
+        ]
+      },
+      {
+        "name": "Returns / service",
+        "signals": [
+          "Poor support: no response, refused to refund, terrible customer service",
+          "Difficult refund or exchange process"
+        ]
+      },
+      {
+        "name": "Poor value",
+        "signals": [
+          "Not worth the price: not worth the money, overpriced for the quality"
+        ]
+      },
+      {
+        "name": "Negative emotion words",
+        "signals": [
+          "disappointed, awful, terrible, regret, waste of money, do NOT buy"
+        ]
+      }
+    ],
+    "examples": [
+      "Amen. But the ring broke after 2 days. → negative (faith + product complaint)",
+      "The design is gorgeous but the quality is terrible and it broke in a week. → negative"
+    ]
+  },
+
+  "neutral": {
+    "core": "No substantive product/service evaluation, or purely factual/descriptive content.",
+    "categories": [
+      {
+        "name": "Pure religious expression (brand-specific — important)",
+        "signals": [
+          "Standalone faith phrases: Praise God!, Amen!, God bless!, Hallelujah!, Thank you Jesus!",
+          "To God be the glory",
+          "Bible verse quote only, with no product opinion",
+          "Amen / faith phrase + emojis only",
+          "Emoji-only comments (❤️, 🙏, 🙌)",
+          "Repetitive faith affirmations without product opinion: Amen Amen, Amen y Amen"
+        ],
+        "note": "Religious words alone are NOT positive. If faith expression includes product opinion, follow product opinion."
+      },
+      {
+        "name": "Pure factual statements",
+        "signals": [
+          "I ordered size 7 and received size 7",
+          "I saw this on Instagram"
+        ]
+      },
+      {
+        "name": "Questions or inquiries",
+        "signals": [
+          "Does this come in gold?",
+          "How does it work?",
+          "When will it be available?"
+        ]
+      },
+      {
+        "name": "Vague / low-signal comments",
+        "signals": [
+          "OK, Fine, It's a ring, Interesting, Wow, Hmm",
+          "CTA replies on social posts (e.g. Comment Mark for link → Mark)"
+        ]
+      },
+      {
+        "name": "Devotional post engagement (Glorify)",
+        "signals": [
+          "User replies Amen or emoji to a Bible verse / devotional caption — engaging with content, NOT reviewing the app → neutral unless they explicitly praise the app/product"
+        ]
+      }
+    ]
+  },
+
+  "faith_with_product_priority": [
+    "Praise God! This ring is beautiful! → positive",
+    "Amen. But the ring broke after 2 days. → negative",
+    "Praise God! → neutral",
+    "Amen 🙏 → neutral"
+  ],
+
+  "pure_faith_phrases": [
+    "amen",
+    "amén",
+    "amém",
+    "praise god",
+    "praise the lord",
+    "god bless",
+    "god is good",
+    "thank you jesus",
+    "to god be the glory",
+    "hallelujah",
+    "aleluya",
+    "aleluia",
+    "jesus is lord",
+    "gloria a dios",
+    "glória a deus",
+    "let's pray",
+    "lets pray",
+    "praying for you"
+  ],
+
+  "project_types": [
+    {
+      "id": "Glorify",
+      "description": "faith/devotional app, prayer, Bible, church community, spiritual plans"
+    },
+    {
+      "id": "NFC",
+      "description": "NFC smart ring, NFC hardware, NFC tags, tap-to-connect features"
+    }
+  ],
+
+  "output_notes": {
+    "language": "Primary language of the comment, written in English (e.g. English, Spanish, Portuguese)",
+    "recommended_reply": "Required for positive/negative only; empty string for neutral; same language as comment; Glorify tone warm/sincere; NFC tone helpful product support"
+  }
+}
