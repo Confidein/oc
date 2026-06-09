@@ -1,7 +1,7 @@
 {
   "id": "company-memory",
   "name": "Company Memory",
-  "description": "Scoped public/private LanceDB memory tools for company OpenClaw agents.",
+  "description": "Scoped public/private pgvector (AWS RDS) memory tools for company OpenClaw agents.",
   "version": "0.1.0",
   "configSchema": {
     "type": "object",
