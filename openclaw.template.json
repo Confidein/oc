@@ -155,21 +155,24 @@
       "company-memory": {
         "enabled": true,
         "config": {
-          "dbPath": "~/.openclaw/company-memory/lancedb",
+          "pgvector": {
+            "connectionString": "postgresql://postgres:CHANGE_ME@ocmemory.ca1a4imso7ia.us-east-1.rds.amazonaws.com:5432/postgres?sslmode=require",
+            "ssl": true,
+            "poolMin": 1,
+            "poolMax": 5
+          },
           "tableName": "memories",
           "tenantId": "default",
+          "vectorDimensions": 1536,
           "embedding": {
             "provider": "openai",
-            "model": "text-embedding-3-small",
-            "baseUrl": "https://api.openai.com/v1"
+            "model": "text-embedding-3-small"
           },
           "limits": {
             "defaultSearchLimit": 8,
             "maxSearchLimit": 20,
             "maxStoreChars": 12000
-          },
-          "_note": "迁移到 RDS 后，删除 dbPath，改用 connectionString",
-          "connectionString": "YOUR_RDS_CONNECTION_STRING_HERE"
+          }
         }
       },
       "memory-core": {
