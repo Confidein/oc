@@ -160,8 +160,12 @@ function getPool(config) {
   const pv = config.pgvector ?? {};
   const ssl = pv.ssl !== false ? { rejectUnauthorized: false } : false;
 
-  const poolConfig = pv.connectionString
-    ? { connectionString: pv.connectionString, ssl, min: pv.poolMin ?? 1, max: pv.poolMax ?? 5 }
+  // 去掉 connectionString 里的 sslmode 参数，改由 ssl 对象统一控制
+  // （pg v8 新版把 sslmode=require 升级为 verify-full，会导致 AWS RDS 自签名证书报错）
+  const cleanCs = (pv.connectionString ?? "").replace(/[?&]sslmode=[^&]*/g, "").replace(/\?$/, "");
+
+  const poolConfig = cleanCs
+    ? { connectionString: cleanCs, ssl, min: pv.poolMin ?? 1, max: pv.poolMax ?? 5 }
     : {
         host: pv.host ?? "localhost",
         port: pv.port ?? 5432,
