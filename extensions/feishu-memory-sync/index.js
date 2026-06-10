@@ -144,20 +144,304 @@ async function feishuPaginateGet(domain, token, basePath, dataKey, maxItems = 10
   return items.slice(0, maxItems);
 }
 
-// ── 文本提取（群消息）────────────────────────────────────────
+// ── 飞书文档 URL 识别 ────────────────────────────────────────
 
-function extractMessageText(msg) {
+const DOC_URL_PATTERNS = [
+  { re: /feishu\.cn\/docx\/([A-Za-z0-9_-]{10,})/,     type: "docx"     },
+  { re: /feishu\.cn\/docs\/([A-Za-z0-9_-]{10,})/,     type: "doc"      },
+  { re: /feishu\.cn\/sheets\/([A-Za-z0-9_-]{10,})/,   type: "sheet"    },
+  { re: /feishu\.cn\/base\/([A-Za-z0-9_-]{10,})/,     type: "bitable"  },
+  { re: /feishu\.cn\/wiki\/([A-Za-z0-9_-]{10,})/,     type: "wiki"     },
+  { re: /feishu\.cn\/file\/([A-Za-z0-9_-]{10,})/,     type: "file"     },
+  { re: /larksuite\.com\/docx\/([A-Za-z0-9_-]{10,})/, type: "docx"     },
+  { re: /larksuite\.com\/docs\/([A-Za-z0-9_-]{10,})/, type: "doc"      },
+  { re: /larksuite\.com\/sheets\/([A-Za-z0-9_-]{10,})/,type: "sheet"   },
+  { re: /larksuite\.com\/base\/([A-Za-z0-9_-]{10,})/,  type: "bitable" },
+  { re: /larksuite\.com\/wiki\/([A-Za-z0-9_-]{10,})/,  type: "wiki"    },
+];
+
+function extractDocLinks(text) {
+  const results = [];
+  for (const { re, type } of DOC_URL_PATTERNS) {
+    const m = text.match(re);
+    if (m) results.push({ token: m[1], type });
+  }
+  return results;
+}
+
+// ── 用户 token 加载（授权回退用）────────────────────────────
+
+async function loadUserTokens() {
+  const authPath = path.join(
+    os.homedir(), ".openclaw/agents/main/agent/auth-state.json"
+  );
   try {
-    if (msg.msg_type === "text") {
-      return JSON.parse(msg.body?.content ?? "{}").text ?? "";
+    const raw = JSON.parse(await fs.readFile(authPath, "utf8"));
+    // 收集所有 access_token
+    const tokens = [];
+    function walk(obj) {
+      if (!obj || typeof obj !== "object") return;
+      if (obj.access_token && typeof obj.access_token === "string") {
+        tokens.push(obj.access_token);
+      }
+      for (const v of Object.values(obj)) walk(v);
     }
-    if (msg.msg_type === "post") {
-      const post = JSON.parse(msg.body?.content ?? "{}");
-      const content = post.zh_cn?.content ?? post.en_us?.content ?? [];
-      return content.flat().filter(e => e.tag === "text").map(e => e.text).join(" ");
+    walk(raw);
+    return [...new Set(tokens)];
+  } catch { return []; }
+}
+
+// ── 飞书文档内容获取（带权限回退）────────────────────────────
+
+async function fetchDocContent(domain, botToken, docType, docToken, userTokens = []) {
+  const tryTokens = [botToken, ...userTokens];
+
+  for (const token of tryTokens) {
+    try {
+      const content = await fetchDocWithToken(domain, token, docType, docToken);
+      if (content) return content;
+    } catch (err) {
+      // 403 权限不足，换下一个 token
+      if (err.message?.includes("403") || err.message?.includes("permission") ||
+          err.message?.includes("99991663") || err.message?.includes("99991401")) {
+        continue;
+      }
+      throw err;
     }
-  } catch {}
-  return "";
+  }
+  return null; // 所有 token 都没权限
+}
+
+async function fetchDocWithToken(domain, token, docType, docToken) {
+  const headers = { authorization: `Bearer ${token}` };
+
+  if (docType === "docx") {
+    const r = await fetch(
+      `https://${domain}/open-apis/docx/v1/documents/${docToken}/raw_content`,
+      { headers }
+    );
+    const d = await r.json();
+    if (d.code === 99991663 || d.code === 99991401) throw new Error("403 permission");
+    if (d.code !== 0) throw new Error(`docx API error: ${d.msg}`);
+    return d.data?.content?.trim() ?? null;
+  }
+
+  if (docType === "doc") {
+    const r = await fetch(
+      `https://${domain}/open-apis/doc/v2/${docToken}/raw_content`,
+      { headers }
+    );
+    const d = await r.json();
+    if (d.code === 99991663 || d.code === 99991401) throw new Error("403 permission");
+    if (d.code !== 0) throw new Error(`doc API error: ${d.msg}`);
+    return d.data?.content?.trim() ?? null;
+  }
+
+  if (docType === "sheet") {
+    // 读取第一个 sheet 的前 100 行
+    const r1 = await fetch(
+      `https://${domain}/open-apis/sheets/v2/spreadsheets/${docToken}/metainfo`,
+      { headers }
+    );
+    const d1 = await r1.json();
+    if (d1.code === 99991663 || d1.code === 99991401) throw new Error("403 permission");
+    if (d1.code !== 0) throw new Error(`sheet meta error: ${d1.msg}`);
+    const sheets = d1.data?.sheets ?? [];
+    if (!sheets.length) return null;
+    const sheetId = sheets[0].sheetId;
+    const title   = d1.data?.properties?.title ?? docToken;
+
+    const r2 = await fetch(
+      `https://${domain}/open-apis/sheets/v2/spreadsheets/${docToken}/values/${sheetId}!A1:Z100`,
+      { headers }
+    );
+    const d2 = await r2.json();
+    if (d2.code !== 0) return `[电子表格: ${title}]`;
+    const rows = d2.data?.valueRange?.values ?? [];
+    const text = rows.map(row =>
+      row.filter(Boolean).join("\t")
+    ).filter(Boolean).join("\n");
+    return `[电子表格: ${title}]\n${text}`;
+  }
+
+  if (docType === "bitable") {
+    const r1 = await fetch(
+      `https://${domain}/open-apis/bitable/v1/apps/${docToken}`,
+      { headers }
+    );
+    const d1 = await r1.json();
+    if (d1.code === 99991663 || d1.code === 99991401) throw new Error("403 permission");
+    const appName = d1.data?.app?.name ?? docToken;
+
+    const r2 = await fetch(
+      `https://${domain}/open-apis/bitable/v1/apps/${docToken}/tables?page_size=10`,
+      { headers }
+    );
+    const d2 = await r2.json();
+    const tables = d2.data?.items ?? [];
+    const parts  = [`[多维表格: ${appName}]`];
+
+    for (const tbl of tables.slice(0, 3)) {
+      // 读每个表的字段名 + 前 20 条记录
+      const r3 = await fetch(
+        `https://${domain}/open-apis/bitable/v1/apps/${docToken}/tables/${tbl.table_id}/records?page_size=20`,
+        { headers }
+      );
+      const d3 = await r3.json();
+      const records = d3.data?.items ?? [];
+      const rows = records.map(rec =>
+        Object.entries(rec.fields ?? {}).map(([k,v]) => `${k}: ${JSON.stringify(v)}`).join(" | ")
+      );
+      parts.push(`表[${tbl.name}]:\n${rows.join("\n")}`);
+    }
+    return parts.join("\n\n");
+  }
+
+  if (docType === "wiki") {
+    // wiki token 先转 obj_token
+    const r1 = await fetch(
+      `https://${domain}/open-apis/wiki/v2/nodes?token=${docToken}`,
+      { headers }
+    );
+    const d1 = await r1.json();
+    const node = d1.data?.node;
+    if (!node) return null;
+    const objToken = node.obj_token;
+    const objType  = node.obj_type; // docx / doc
+    return fetchDocWithToken(domain, token, objType, objToken);
+  }
+
+  if (docType === "file") {
+    // 获取文件信息（名称、类型），下载后尝试提取文本
+    const r1 = await fetch(
+      `https://${domain}/open-apis/drive/v1/files/${docToken}`,
+      { headers }
+    );
+    const d1 = await r1.json();
+    if (d1.code === 99991663 || d1.code === 99991401) throw new Error("403 permission");
+    const name = d1.data?.file?.name ?? docToken;
+    const mimeType = d1.data?.file?.type ?? "";
+
+    // PDF：尝试下载并提取文字（需 pdfjs-dist，没有则只记录文件名）
+    if (mimeType.includes("pdf") || name.toLowerCase().endsWith(".pdf")) {
+      try {
+        const text = await extractPdfText(domain, token, docToken, name);
+        return text ? `[PDF: ${name}]\n${text}` : `[PDF 文件: ${name}（无法提取文字）]`;
+      } catch {
+        return `[PDF 文件: ${name}（提取失败）]`;
+      }
+    }
+
+    // 其他文件类型：只记录文件名
+    return `[文件: ${name}（类型: ${mimeType || "未知"}，暂不支持提取内容）]`;
+  }
+
+  return null;
+}
+
+// ── PDF 文本提取（动态加载 pdfjs-dist）──────────────────────
+
+async function extractPdfText(domain, token, fileToken, fileName) {
+  // 1. 下载文件
+  const r = await fetch(
+    `https://${domain}/open-apis/drive/v1/medias/${fileToken}/download`,
+    { headers: { authorization: `Bearer ${token}` } }
+  );
+  if (!r.ok) throw new Error(`下载失败: ${r.status}`);
+  const buffer = Buffer.from(await r.arrayBuffer());
+
+  // 2. 尝试用 pdfjs-dist 解析（可选依赖）
+  try {
+    const pdfjs = await import("pdfjs-dist/legacy/build/pdf.js").catch(() => null);
+    if (!pdfjs) return null;
+
+    const doc = await pdfjs.getDocument({ data: buffer }).promise;
+    const parts = [];
+    for (let i = 1; i <= Math.min(doc.numPages, 20); i++) {
+      const page    = await doc.getPage(i);
+      const content = await page.getTextContent();
+      const text    = content.items.map(it => it.str).join(" ");
+      if (text.trim()) parts.push(text.trim());
+    }
+    return parts.join("\n\n");
+  } catch { return null; }
+}
+
+// ── 消息内容提取（文本 + 文档 + 文件）───────────────────────
+
+async function extractMessageContent(domain, botToken, userTokens, msg) {
+  const results = [];
+
+  // ① 文本 / 富文本 → 提取文字 + 识别文档链接
+  if (msg.msg_type === "text" || msg.msg_type === "post") {
+    let rawText = "";
+    try {
+      if (msg.msg_type === "text") {
+        rawText = JSON.parse(msg.body?.content ?? "{}").text ?? "";
+      } else {
+        const post = JSON.parse(msg.body?.content ?? "{}");
+        const content = post.zh_cn?.content ?? post.en_us?.content ?? [];
+        rawText = content.flat()
+          .map(e => e.tag === "text" ? e.text : e.tag === "a" ? e.text + " " + e.href : "")
+          .join(" ");
+      }
+    } catch {}
+
+    const docLinks = extractDocLinks(rawText);
+
+    if (docLinks.length === 0) {
+      // 普通文本
+      return rawText.trim() || null;
+    }
+
+    // 有文档链接 → 先保留原始文字，再追加文档内容
+    const pureText = rawText.replace(/https?:\/\/\S+/g, "").trim();
+    if (pureText) results.push(pureText);
+
+    for (const { token: docTok, type } of docLinks) {
+      const content = await fetchDocContent(domain, botToken, type, docTok, userTokens);
+      if (content) results.push(content);
+      else results.push(`[文档链接（无权限或不支持）: ${type}/${docTok}]`);
+    }
+    return results.join("\n\n") || null;
+  }
+
+  // ② 文件消息
+  if (msg.msg_type === "file") {
+    try {
+      const body    = JSON.parse(msg.body?.content ?? "{}");
+      const fileKey = body.file_key;
+      if (!fileKey) return null;
+      // file_key 开头是 file_，后面接 token
+      const fToken  = fileKey.replace(/^file_/, "");
+      const content = await fetchDocContent(domain, botToken, "file", fToken, userTokens);
+      return content ?? `[文件消息（无法获取内容）]`;
+    } catch { return null; }
+  }
+
+  // ③ 分享文档卡片（share_doc / interactive）
+  if (msg.msg_type === "share_doc" || msg.msg_type === "interactive") {
+    try {
+      const body = JSON.parse(msg.body?.content ?? "{}");
+      // share_doc 直接有 token
+      const docTok = body.token ?? body.doc_token;
+      const type   = body.type ?? "docx";
+      if (docTok) {
+        const content = await fetchDocContent(domain, botToken, type, docTok, userTokens);
+        return content ?? `[共享文档（无权限）: ${type}/${docTok}]`;
+      }
+      // interactive 卡片里找 URL
+      const cardStr = JSON.stringify(body);
+      const links   = extractDocLinks(cardStr);
+      for (const { token: t, type: tp } of links) {
+        const content = await fetchDocContent(domain, botToken, tp, t, userTokens);
+        if (content) return content;
+      }
+    } catch {}
+    return null;
+  }
+
+  return null; // image / media / sticker 等跳过
 }
 
 // ── 文档分块 ────────────────────────────────────────────────
@@ -223,6 +507,9 @@ function createGroupSyncTool(api, ctx) {
       const token = await getTenantToken(feishu);
       const state = await loadState("group-sync");
 
+      // 加载用户 token（文档权限回退用）
+      const userTokens = await loadUserTokens();
+
       const maxChats    = params.max_chats             ?? groups.maxChatsPerRun   ?? 100;
       const maxMsgs     = params.max_messages_per_chat ?? groups.maxMessagesPerChat ?? 50;
       const lookback    = params.initial_lookback_minutes ?? 0;
@@ -276,18 +563,35 @@ function createGroupSyncTool(api, ctx) {
           // 跳过 Bot 自己发的消息
           if (msg.sender?.sender_type !== "user") continue;
 
-          const text = extractMessageText(msg).trim();
-          if (text.length < minLen) continue;
-
           const msgTs = parseInt(msg.create_time ?? "0");
-          if (msgTs <= (chatState.last_message_time ?? 0)) continue; // 去重
+          if (msgTs <= (chatState.last_message_time ?? 0)) continue;
+
+          // 提取内容（文本、文档链接、文件消息全支持）
+          let content = null;
+          try {
+            content = await extractMessageContent(
+              feishu.domain, token, userTokens, msg
+            );
+          } catch (err) {
+            console.warn(`[feishu-memory-sync] 消息内容提取失败 ${msg.message_id}: ${err.message}`);
+          }
+
+          if (!content || content.trim().length < minLen) {
+            if (msgTs > lastTs) lastTs = msgTs;
+            continue;
+          }
+
+          // 根据内容长度和类型判断 category
+          const isDoc = content.includes("[PDF:") || content.includes("[文件:") ||
+                        content.includes("[电子表格:") || content.includes("[多维表格:");
+          const category = isDoc ? "doc" : "chat";
 
           items.push({
-            text: `[${chatName}] ${text}`,
+            text: `[${chatName}] ${content.trim()}`,
             source: "lark_group",
             source_id: msg.message_id,
             module,
-            category: "chat",
+            category,
             chat_id: chatId
           });
 
