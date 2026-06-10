@@ -93,11 +93,30 @@ apply_config() {
 # ── 6. 安装官方插件 ─────────────────────────────────────────
 install_plugins() {
   log "安装官方插件..."
+
+  # 读取已安装的插件 spec 列表
+  installed=$(python3 -c "
+import json, os
+path = os.path.expanduser('~/.openclaw/plugins/installs.json')
+try:
+    data = json.load(open(path))
+    records = data.get('installRecords', {})
+    specs = [v.get('spec', v.get('sourcePath', '')) for v in records.values()]
+    print('\n'.join(s for s in specs if s))
+except:
+    pass
+" 2>/dev/null)
+
   while IFS= read -r line; do
     [[ "$line" =~ ^#.*$ || -z "$line" ]] && continue
     pkg=$(echo "$line" | awk '{print $NF}')
-    log "  安装 $pkg..."
-    openclaw plugins install "$pkg" 2>/dev/null || warn "  $pkg 安装失败，请手动检查"
+
+    if echo "$installed" | grep -qF "$pkg"; then
+      log "  跳过（已安装）: $pkg"
+    else
+      log "  安装 $pkg..."
+      openclaw plugins install "$pkg" 2>/dev/null && log "  ✓ $pkg" || warn "  $pkg 安装失败，请手动检查"
+    fi
   done < "$REPO_DIR/plugins.list"
   log "plugins ✓"
 }
